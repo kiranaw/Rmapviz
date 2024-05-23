@@ -16,22 +16,22 @@ sim_result <- inner_join(breedingsiteupdated, map,  by = c("cell" = "id_maille")
 
 
 ######## one example map ############
-map_ninth <- sim_result %>%
-  filter(day == 9)
+map_100 <- sim_result %>%
+  filter(day == 100)
 
-map_ninth <- st_as_sf(map_ninth)
+map_100 <- st_as_sf(map_100)
 
-plot(map_ninth["wbs"], border= "white", lwd=0.2)
+plot(map_100["wbs"], border= "white", lwd=0.2)
 
-map_ninth %>%
+map_100 %>%
   ggplot(aes(fill=wbs)) +
   geom_sf(color="white", size=.1) +
   theme_void() +
-  scale_fill_distiller(palette="YlOrRd", direction=1, guide=guide_legend(label.position="bottom", title.position="left", nrow=1), name="water in breeding site (ml)") +
+  scale_fill_distiller(palette="YlOrRd", direction=1, guide=guide_legend(label.position="bottom", title.position="left", nrow=1), name="water in breeding site") +
   theme(legend.position="bottom")
 
 
-######## animating series of map ###########
+######## generate series of map ###########
 library(lubridate)
 library(gganimate)
 
@@ -46,11 +46,9 @@ p <- sim_result %>%
   scale_fill_distiller(palette="YlOrRd", direction=1, guide=guide_legend(label.position="bottom", title.position="left", nrow=1), name="water in breeding site (ml)") +
   theme(legend.position="bottom") +
   labs(title="", subtitle="", caption="", tag="{current_frame}") +
-  theme(legend.position=c(.15,-.09), legend.title=element_text(hjust=.5), plot.title=element_text(size=rel(1.5), family="sans", face="bold"), plot.subtitle=element_text(color="#5e5855"), plot.caption=element_text(color="#867e7a"), plot.tag=element_text(hjust=0.5, color="#5e5855"), plot.tag.position=c(0.5, 0.16), panel.background=element_rect(fill="#aad3df", color=NA)) +
+  #theme(legend.position=c(.15,-.09), legend.title=element_text(hjust=.5), plot.title=element_text(size=rel(1.5), family="sans", face="bold"), plot.subtitle=element_text(color="#5e5855"), plot.caption=element_text(color="#867e7a"), plot.tag=element_text(hjust=0.5, color="#5e5855"), plot.tag.position=c(0.5, 0.16), panel.background=element_rect(fill="#aad3df", color=NA)) +
   transition_manual(day)
 
-animate(p, width=1080, height=755, renderer=file_renderer(dir="anim_mola_img23/"))
-
-anim_save("molawbstry.gif", p, width=1080, height=755)
+animate(p, width=1080, height=755, renderer=file_renderer(dir="anim_mola_img/"))
 
 
