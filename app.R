@@ -1,8 +1,18 @@
 library(shiny)
 
-createMap_for_a_day <- function(map_100){
-  
-  result_plot <- ggplot(map_100, aes(fill=wbs)) +
+map <- st_read("/home/kirana/Nextcloud/MO3viz/mapviz/maille.gpkg")
+breedingsiteupdated <- read_csv("/home/kirana/Nextcloud/MO3viz/processjson/simev_chunks/2603/csv/breedingsiteupdate.csv")
+
+breedingsiteupdated <- breedingsiteupdated %>%
+  mutate(day = (hour / 24) + 1) %>%
+  select(day, wbs, wfbs, cell)
+
+# join with the map cells
+sim_result <- inner_join(breedingsiteupdated, map,  by = c("cell" = "id_maille"))
+
+
+createMap_for_a_day <- function(day){
+  result_plot <- ggplot(day, aes(fill=wbs)) +
     geom_sf(color="white", size=.1) +
     theme_void() +
     scale_fill_distiller(palette="YlOrRd", direction=1, guide=guide_legend(label.position="bottom", title.position="left", nrow=1), name="water in breeding site") +
