@@ -15,18 +15,6 @@ breedingsiteupdated <- breedingsiteupdated %>%
 # join with the map cells
 sim_result <- inner_join(breedingsiteupdated, map,  by = c("cell" = "id_maille"))
 
-
-######## one example map ############
-map_100 <- sim_result %>%
-  filter(day == 100)
-
-map_100 <- st_as_sf(map_100)
-
-map100n <- st_transform(map_100, "+init=epsg:4326")
-
-bins <- c(0, 0.2, 0.4, 0.6, 0.8, 1.0, Inf)
-pal <- colorBin("YlOrRd", domain = map100n$wbs, bins = bins)
-
 createMap_for_a_day <- function(day){
   result_plot <- ggplot(day, aes(fill=wbs)) +
     geom_sf(color="white", size=.1) +
@@ -34,6 +22,31 @@ createMap_for_a_day <- function(day){
     scale_fill_distiller(palette="YlOrRd", direction=1, guide=guide_legend(label.position="bottom", title.position="left", nrow=1), name="water in breeding site") +
     theme(legend.position="bottom")
   return(result_plot)
+}
+
+createMap_for_a_day <- function(day){
+  
+  bins <- c(0, 0.2, 0.4, 0.6, 0.8, 1.0, Inf)
+  pal <- colorBin("YlOrRd", domain = day$wbs, bins = bins)
+  
+    leaflet(day) %>%
+    addProviderTiles("MapBox", options = providerTileOptions(
+      id = "mapbox.light",
+      accessToken = Sys.getenv('MAPBOX_PUBLIC_TOKEN'))) %>%
+    addPolygons(
+      fillColor = ~pal(wbs),
+      weight = 0.1,
+      opacity = 1,
+      color = "white",
+      dashArray = "3",
+      fillOpacity = 0.7,
+      highlightOptions = highlightOptions(
+        weight = 8,
+        color = "#666",
+        fillOpacity = 0.7,
+        bringToFront = TRUE)) %>%
+    addLegend(pal = pal, values = ~density, opacity = 0.7, title = NULL,
+              position = "bottomright")
 }
 
 ui <- fluidPage(
@@ -75,25 +88,11 @@ server <- function(input, output) {
   
   output$daytext <- reactive({input$day})
   
+
+  
   output$map = renderLeaflet({
-    leaflet(daily_map_data()) %>%
-      addProviderTiles("MapBox", options = providerTileOptions(
-        id = "mapbox.light",
-        accessToken = Sys.getenv('MAPBOX_PUBLIC_TOKEN'))) %>%
-      addPolygons(
-        fillColor = ~pal(wbs),
-        weight = 0.1,
-        opacity = 1,
-        color = "white",
-        dashArray = "3",
-        fillOpacity = 0.7,
-        highlightOptions = highlightOptions(
-          weight = 8,
-          color = "#666",
-          fillOpacity = 0.7,
-          bringToFront = TRUE)) %>%
-      addLegend(pal = pal, values = ~density, opacity = 0.7, title = NULL,
-                position = "bottomright")
+    
+    createMap_for_a_day(daily_map_data())
     
   })
 }
