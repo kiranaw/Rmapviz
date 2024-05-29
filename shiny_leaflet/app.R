@@ -16,15 +16,6 @@ breedingsiteupdated <- breedingsiteupdated %>%
 sim_result <- inner_join(breedingsiteupdated, map,  by = c("cell" = "id_maille"))
 
 createMap_for_a_day <- function(day){
-  result_plot <- ggplot(day, aes(fill=wbs)) +
-    geom_sf(color="white", size=.1) +
-    theme_void() +
-    scale_fill_distiller(palette="YlOrRd", direction=1, guide=guide_legend(label.position="bottom", title.position="left", nrow=1), name="water in breeding site") +
-    theme(legend.position="bottom")
-  return(result_plot)
-}
-
-createMap_for_a_day <- function(day){
   
   bins <- c(0, 0.2, 0.4, 0.6, 0.8, 1.0, Inf)
   pal <- colorBin("YlOrRd", domain = day$wbs, bins = bins)
@@ -63,15 +54,12 @@ ui <- fluidPage(
         max = 365, 
         value = 100,animate = T
       ),
-      
     ),
     
     
     
     mainPanel = mainPanel(
-      
       leafletOutput(outputId = 'map')
-      
     )
   )
 )
@@ -88,12 +76,8 @@ server <- function(input, output) {
   
   output$daytext <- reactive({input$day})
   
-
-  
   output$map = renderLeaflet({
-    
     createMap_for_a_day(daily_map_data())
-    
   })
 }
 
