@@ -8,19 +8,36 @@ breedingsiteupdated <- read_csv("/home/kirana/Nextcloud/MO3viz/processjson/simev
 
 breedingsiteupdated <- breedingsiteupdated %>%
   mutate(day = (hour / 24) + 1) %>%
-  select(day, wbs, wfbs, cell)
+  select(day, wbs, cell)
 
-# join with the map cells
-# + turn into a big sf object with everything
-sim_result <- inner_join(breedingsiteupdated, map,  by = c("cell" = "id_maille")) %>% st_as_sf()
+mosquitostockupdated <- read_csv("/home/kirana/Nextcloud/MO3viz/processjson/simev_chunks/2603/csv/mosquitostockupdate.csv")
 
+mosquitostockupdated <- mosquitostockupdated %>%
+  mutate(day = hour / 24) %>%
+  select(day, cell, am)
 
-createMap_for_a_day <- function(day){
+sim_result <- inner_join(breedingsiteupdated, mosquitostockupdated, by = c("cell" = "cell", "day" = "day"))
+
+sim_result <- inner_join(sim_result, map,  by = c("cell" = "id_maille")) %>% st_as_sf()
+
+################ create map function#############
+wbs_createMap_for_a_day <- function(day){
   result_plot <- ggplot(day, aes(fill=wbs)) +
     geom_sf(color="lightgrey", size=.001) +
     theme_void() +
     scale_fill_distiller(palette="YlOrRd", direction=1, guide=guide_legend(label.position="bottom", title.position="left", nrow=1), name="water in breeding site") +
-    theme(legend.position="bottom")
+    theme(legend.position="bottom") +
+    ggtitle("Water in Breeding Sites")
+  return(result_plot)
+}
+ 
+am_createMap_for_a_day <- function(day){
+  result_plot <- ggplot(day, aes(fill=am)) +
+    geom_sf(color="lightgrey", size=.001) +
+    theme_void() +
+    scale_fill_distiller(palette="YlOrRd", direction=1, guide=guide_legend(label.position="bottom", title.position="left", nrow=1), name="adult mosquitoes") +
+    theme(legend.position="bottom") +
+    ggtitle("Adult Mosquitoes")
   return(result_plot)
 }
 
@@ -36,7 +53,7 @@ ui <- fluidPage(
   ),
   sliderInput(width = 1000,
               inputId = "day_in_slider",
-              label = "the day for the map",
+              label = "day of year",
               min = 1,
               max = 365,
               value = 100,
@@ -47,20 +64,24 @@ ui <- fluidPage(
 
 server <- function(input, output) {
   # the map ggplot object created each time the slider is moved 
-  daily_map_data <- reactive({
-    sim_result %>% filter(day==input$day_in_slider) %>% createMap_for_a_day()
+  daily_map_data1 <- reactive({
+    sim_result %>% filter(day==input$day_in_slider) %>% wbs_createMap_for_a_day()
   })
   
+  daily_map_data2 <- reactive({
+    sim_result %>% filter(day==input$day_in_slider) %>% am_createMap_for_a_day()
+  })
+
   # the plot rendering routine
   output$dailymap <- renderPlot({
     # this trick comes from internet newpage=F seems to speed up the display
-    print(daily_map_data(), newpage=F)
+    print(daily_map_data1(), newpage=F)
   })
   
   # the plot rendering routine
   output$dailymap2 <- renderPlot({
     # this trick comes from internet newpage=F seems to speed up the display
-    print(daily_map_data(), newpage=F)
+    print(daily_map_data2(), newpage=F)
   })
 }
 
