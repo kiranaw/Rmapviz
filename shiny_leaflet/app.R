@@ -16,10 +16,8 @@ breedingsiteupdated <- breedingsiteupdated %>%
 sim_result <- inner_join(breedingsiteupdated, map,  by = c("cell" = "id_maille"))
 
 createMap_for_a_day <- function(day){
-  
-  bins <- c(0, 0.2, 0.4, 0.6, 0.8, 1.0, Inf)
+  bins <- c(0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, Inf)
   pal <- colorBin("YlOrRd", domain = day$wbs, bins = bins)
-  
     leaflet(day) %>%
     addProviderTiles("MapBox", options = providerTileOptions(
       id = "mapbox.light",
@@ -55,9 +53,6 @@ ui <- fluidPage(
         value = 100,animate = T
       ),
     ),
-    
-    
-    
     mainPanel = mainPanel(
       leafletOutput(outputId = 'map')
     )
