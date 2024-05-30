@@ -3,58 +3,94 @@ library(readr)
 library(dplyr)
 library(ggplot2)
 library(gganimate)
+library(leaflet)
+library(shiny)
+library(dplyr)
 
-map <- st_read("/home/kirana/Nextcloud/MO3viz/mapviz/maille.gpkg")
-breedingsiteupdated <- read_csv("/home/kirana/Nextcloud/MO3viz/processjson/simev_chunks/2603/csv/breedingsiteupdate.csv")
+
+
+###############
+# DATA LOADING
+##############
+
+#map <- st_read("/home/kirana/Nextcloud/MO3viz/mapviz/maille.gpkg")
+map <- st_read("/home/PChapron/Téléchargements/maille.gpkg")
+map<- st_transform(map, 4326)
+#breedingsiteupdated <- read_csv("/home/kirana/Nextcloud/MO3viz/processjson/simev_chunks/2603/csv/breedingsiteupdate.csv")
+breedingsiteupdated <- read_csv("/home/PChapron/Téléchargements/breedingsiteupdate.csv")
+
+
+
+
 
 breedingsiteupdated <- breedingsiteupdated %>%
   mutate(day = (hour / 24) + 1) %>%
   select(day, wbs, wfbs, cell)
 
 # join with the map cells
-sim_result <- inner_join(breedingsiteupdated, map,  by = c("cell" = "id_maille"))
-
+# + turn into a big sf object with everything
+sim_result <- inner_join(breedingsiteupdated, map,  by = c("cell" = "id_maille")) %>% st_as_sf()
 
 ######## one example map ############
 map_100 <- sim_result %>%
-  filter(day == 100)
-
-map_100 <- st_as_sf(map_100)
-
-map_100 %>%
-  ggplot(aes(fill=wbs)) +
-  geom_sf(color="white", size=.1) +
-  theme_void() +
-  scale_fill_distiller(palette="YlOrRd", direction=1, guide=guide_legend(label.position="bottom", title.position="left", nrow=1), name="water in breeding site") +
-  theme(legend.position="bottom")
+  filter(day == 100) 
 
 
+################ create map function#############
+createMap_for_a_day <- function(map_100){
+  
+  result_plot <- ggplot(map_100, aes(fill=wbs)) +
+    geom_sf(color="lightgrey", size=.001) +
+    theme_void() +
+    scale_fill_distiller(palette="YlOrRd", direction=1, guide=guide_legend(label.position="bottom", title.position="left", nrow=1), name="water in breeding site") +
+    theme(legend.position="bottom")
+  return(result_plot)
+}
 
-#with leaflet
-library(leaflet)
-# how to add crs projection so that I can plot that in leaflet?
-#Projected CRS: WGS 84 / UTM zone 47N
-map100n <- st_transform(map_100, "+init=epsg:4326")
 
-bins <- c(0, 0.2, 0.4, 0.6, 0.8, 1.0, Inf)
-pal <- colorBin("YlOrRd", domain = map100n$wbs, bins = bins)
 
-leaflet(map100n) %>%
-  addProviderTiles("MapBox", options = providerTileOptions(
-    id = "mapbox.light",
-    accessToken = Sys.getenv('MAPBOX_ACCESS_TOKEN'))) %>%
-  addPolygons(
-    fillColor = ~pal(wbs),
-    weight = 0.1,
-    opacity = 1,
-    color = "white",
-    dashArray = "3",
-    fillOpacity = 0.7,
-    highlightOptions = highlightOptions(
-      weight = 8,
-      color = "#666",
-      fillOpacity = 0.7,
-      bringToFront = TRUE)) %>%
-  addLegend(pal = pal, values = ~density, opacity = 0.7, title = NULL,
-            position = "bottomright")
 
+##### exec time evaluation ##############
+start_time <- Sys.time()
+sim_result %>% filter(day==100) %>% createMap_for_a_day()
+end_time <- Sys.time()
+# execution time
+end_time - start_time
+
+
+
+
+
+####################
+# SHINY APP
+######################
+
+ui <- fluidPage(
+  # this CSS trick was found on internet
+  tags$style(type="text/css",".recalculating {opacity: 1.0;}"),
+  title = "Day Map",
+  plotOutput("dailymap",height=800),
+  sliderInput(width = 1000,
+              inputId = "day_in_slider",
+              label = "the day for the map",
+              min = 1,
+              max = 365,
+              value = 100,
+              animate = animationOptions(interval = 500)
+  )
+)
+
+server <- function(input, output) {
+  # the map ggplot object created each time the slider is moved 
+  daily_map_data <- reactive({
+    sim_result %>% filter(day==input$day_in_slider) %>% createMap_for_a_day()
+  })
+  
+  # the plot rendering routine
+  output$dailymap <- renderPlot({
+    # this trick comes from internet newpage=F seems to speed up the display
+    print(daily_map_data(), newpage=F)
+  })
+}
+
+shinyApp(ui = ui, server = server)
