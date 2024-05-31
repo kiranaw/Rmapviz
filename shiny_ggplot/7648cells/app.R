@@ -1,9 +1,18 @@
 library(shiny)
+library(ggplot2)
 
 ###############
 # DATA LOADING
 ##############
 map <- st_read("/home/kirana/Nextcloud/MO3viz/mapviz/maille.gpkg")
+map_160 <- read_sf(dsn = "/home/kirana/Nextcloud/MO3viz/mapviz/shp_kw_160_2022.shp", layer = "shp_kw_160_2022") %>% select(-N10POP_T)
+
+cell_district <- map %>% st_centroid %>%
+  st_intersection(map_160) %>%
+  st_drop_geometry()
+
+map <- map %>% left_join(cell_district, by="id_maille") %>% select(-area.x, -area.y)
+
 breedingsiteupdated <- read_csv("/home/kirana/Nextcloud/MO3viz/processjson/simev_chunks/2603/csv/breedingsiteupdate.csv")
 
 breedingsiteupdated <- breedingsiteupdated %>%
@@ -19,6 +28,7 @@ mosquitostockupdated <- mosquitostockupdated %>%
 sim_result <- inner_join(breedingsiteupdated, mosquitostockupdated, by = c("cell" = "cell", "day" = "day"))
 
 sim_result <- inner_join(sim_result, map,  by = c("cell" = "id_maille")) %>% st_as_sf()
+
 
 ################ create map function#############
 wbs_createMap_for_a_day <- function(day){
